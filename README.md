@@ -35,9 +35,3 @@ docker-compose up -d
 
 *(Bạn có thể thiết lập mật khẩu Windows rồi dùng trình Remote Desktop Connection (RDP) trên máy tính của bạn thông qua **Port 3389** để dùng mượt hơn VNC web).*
 
----
-
-## 📖 Tham Khảo Thêm
-Các file log chi tiết và nguồn tài liệu nghiên cứu đính kèm trong thư mục:
-- `FILE_DACHECKTOIUU.MD`: Bản note đầy đủ quy trình thao tác code.
-- `HUONGDAN.MD`: Bản log transcript video hướng dẫn gốc từ nước ngoài.

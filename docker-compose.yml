@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   vps-win:
     build: .
