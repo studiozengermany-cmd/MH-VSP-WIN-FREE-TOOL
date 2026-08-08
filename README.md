@@ -1,55 +1,110 @@
-# 🚀 Hướng Dẫn Tự Tạo VPS Windows 10 Miễn Phí Trên GitHub (Chi Tiết A-Z)
+# Tạo máy ảo Windows 10 trên GitHub Codespaces
 
-Đây là tài liệu hướng dẫn "cầm tay chỉ việc", dành cho những người chưa biết gì về lập trình vẫn có thể dễ dàng làm được. Hãy đọc chậm và làm theo chính xác từng lệnh.
+Hướng dẫn cầm tay chỉ việc cho người mới. Dự án dùng Docker, QEMU/KVM và noVNC để chạy bộ cài Windows 10 trong GitHub Codespaces.
 
----
+> GitHub Codespaces có giới hạn giờ dùng và dung lượng theo tài khoản. Đây không phải VPS miễn phí vĩnh viễn. ISO được tải từ nguồn bên thứ ba; hãy tự kiểm tra quyền sử dụng và độ tin cậy trước khi cài.
 
-## BƯỚC 1: KHỞI TẠO MÁY CHỦ TRÊN GITHUB (CODESPACES)
+## Bước 1: Tạo GitHub Codespace
 
-1. Ở trang chủ của giao diện này, bạn tìm và bấm vào nút màu xanh lá cây có chữ **Code** ở góc phải.
-2. Chuyển sang tab có chữ **Codespaces**.
-3. Bấm vào nút màu xanh lá cây **Create codespace on main**.
-4. Màn hình sẽ chuyển sang chế độ tải (Loading) khoảng 10-20 giây. Khi tải xong, bạn sẽ thấy một giao diện màu đen giống hệt một phần mềm code (đây gọi là Visual Studio Code trên nền web).
+1. Đưa toàn bộ dự án này lên một GitHub repository.
+2. Mở repository trên GitHub.
+3. Bấm **Code**.
+4. Chọn tab **Codespaces**.
+5. Bấm **Create codespace on main**.
+6. Chờ giao diện Codespace tải xong.
 
-### Nâng cấp cấu hình máy chủ (Bắt buộc để chạy mượt)
-1. Quay lại trang GitHub ban đầu, bấm lại vào nút màu xanh **Code** -> **Codespaces**.
-2. Bạn sẽ thấy tên Codespace vừa tạo đang hiện ra. Hãy bấm vào **dấu 3 chấm (...)** ở ngay bên cạnh tên đó.
-3. Chọn dòng chữ **Change machine type**.
-4. Chọn loại cấu hình cao nhất: **2-core / 8GB RAM · 32GB** và bấm nút **Update codespace**.
-5. Quay lại cái tab giao diện màu đen lúc nãy, nó sẽ tự động tải lại với sức mạnh cấu hình mới.
+## Bước 2: Kiểm tra KVM
 
----
-
-## BƯỚC 2: RA LỆNH CÀI ĐẶT WINDOWS (Chạy lệnh)
-
-Khi giao diện màu đen đã tải xong hoàn toàn:
-1. Bạn nhìn xuống **dưới cùng màn hình**, sẽ có một khu vực để gõ chữ gọi là bảng **Terminal** (nếu không thấy, bạn bấm tổ hợp phím `Ctrl` + `~` trên bàn phím để gọi nó lên).
-2. Bấm chuột vào bảng Terminal đó và **Copy / Dán** chính xác câu lệnh sau đây vào:
+Mở **Terminal** trong Codespace bằng `Ctrl` + `` ` ``, rồi chạy:
 
 ```bash
-docker-compose up -d
+ls -l /dev/kvm
 ```
 
-3. Bấm phím **Enter** trên bàn phím.
-4. Hệ thống sẽ bắt đầu tự động tải file cài đặt Windows 10 (bản Lite siêu nhẹ 1.1GB). Vui lòng kiên nhẫn chờ **khoảng 1 đến 3 phút** để nó kéo file về máy ảo.
+Kết quả cần có đường dẫn `/dev/kvm`. Nếu không có, VM vẫn có thể chạy bằng giả lập phần mềm nhưng rất chậm.
 
----
+## Bước 3: Khởi động Windows VM
 
-## BƯỚC 3: BẬT MÀN HÌNH WINDOWS LÊN SỬ DỤNG
+Trong Terminal, chạy đúng lệnh:
 
-Sau khi bạn chờ 3 phút để hệ thống tải xong file cài đặt:
-1. Ở ngay cạnh chỗ cái bảng Terminal lúc nãy, bạn sẽ thấy có một tab tên là **PORTS** (Cổng). Bấm vào đó.
-2. Bạn sẽ thấy danh sách 2 cổng là `3389` và `6080`.
-3. Di chuột lại gần con số **6080**, bạn sẽ thấy một biểu tượng hình quả địa cầu 🌐 (có chữ *Open in Browser* khi rê chuột vào). Hãy **Click vào cái biểu tượng đó**.
-4. Một tab web mới sẽ mở ra hiển thị vài cái tên file, bạn hãy tìm và click vào dòng chữ **`vnc.html`**.
-5. Trang web xuất hiện chữ Connect. Hãy bấm vào nút **Connect** ở giữa màn hình.
+```bash
+docker compose up -d --build
+```
 
-**🎉 XONG! Màn hình xanh cài đặt Windows 10 đã hiện ra ngay trước mắt bạn.**
-Từ bước này trở đi, bạn chỉ việc dùng chuột thao tác click cài đặt y hệt như đang dùng một chiếc máy tính thật. Quá trình cài mất khoảng 10-15 phút.
+Theo dõi tiến trình thật:
 
----
+```bash
+docker compose logs -f
+```
 
-## 💡 Các Lưu Ý Cực Kỳ Quan Trọng
-- Khi Windows hỏi tạo tên người dùng, bạn cứ nhập tuỳ ý (ví dụ: `Anonymous`). Mật khẩu nên đặt ngắn gọn dễ nhớ (ví dụ: `123456789`).
-- Đây là bản Windows 10 Lite, đã được tối ưu xoá hết rác dư thừa nên chạy cực kỳ mượt mà cho các tác vụ lướt web, treo tool hoặc làm việc văn phòng cơ bản.
-- Sau khi cài Windows xong, bạn có thể thiết lập dùng Remote Desktop Connection (RDP) để kết nối trực tiếp từ máy tính thật vào VPS thông qua cổng `3389` thay vì dùng qua trình duyệt để có tốc độ nhanh nhất!
+Lần đầu hệ thống sẽ:
+
+1. Build Docker image.
+2. Tải ISO Windows vào volume `windows_iso`.
+3. Tạo ổ đĩa ảo 100GB trong volume `windows_data`.
+4. Khởi động QEMU và noVNC.
+
+Thời gian phụ thuộc tốc độ mạng và tải của máy chủ chứa ISO. Không đóng Codespace trong lúc tải.
+
+Nhấn `Ctrl` + `C` để thoát màn hình log; container vẫn chạy nền.
+
+## Bước 4: Mở màn hình cài Windows
+
+1. Trong Codespace, mở tab **PORTS**.
+2. Tìm cổng **6080**.
+3. Bấm biểu tượng **Open in Browser** của cổng 6080.
+4. Nếu trang liệt kê file xuất hiện, bấm `vnc.html`.
+5. Bấm **Connect**.
+6. Làm theo Windows Setup.
+7. Tại màn hình chọn ổ đĩa, chọn **Drive 0 Unallocated Space**, rồi bấm **Next**.
+
+Không mở cổng 3389 bằng trình duyệt. Cổng 3389 dùng cho ứng dụng Remote Desktop sau khi Windows đã cài xong và RDP đã được bật trong Windows.
+
+## Bước 5: Kiểm tra hoặc xử lý lỗi
+
+Xem trạng thái:
+
+```bash
+docker compose ps
+```
+
+Xem 100 dòng log gần nhất:
+
+```bash
+docker compose logs --tail=100
+```
+
+Khởi động lại, vẫn giữ Windows và ISO:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+Dừng hệ thống:
+
+```bash
+docker compose down
+```
+
+## Cảnh báo dữ liệu
+
+Hai volume sau giữ dữ liệu qua các lần restart:
+
+- `windows_data`: ổ đĩa Windows.
+- `windows_iso`: file ISO.
+
+Không chạy lệnh sau nếu còn cần Windows đã cài:
+
+```bash
+docker compose down -v
+```
+
+Lệnh đó xóa cả hai volume, đồng nghĩa xóa máy Windows và ISO.
+
+## Bảo mật
+
+- Dùng mật khẩu Windows mạnh, duy nhất. Không dùng `123456789`.
+- Giữ cổng Codespaces ở chế độ **Private**.
+- Chỉ bật RDP sau khi Windows đã cài hoàn chỉnh.
+- Không công khai cổng 3389 ra Internet.

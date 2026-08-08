@@ -1,67 +1,58 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Check for KVM support
+ISO_PATH="/iso/win10.iso"
+ISO_TMP="/iso/win10.iso.part"
+DISK_PATH="/data/win10.qcow2"
+QEMU_PID=""
+NOVNC_PID=""
+
+cleanup() {
+  [ -z "$NOVNC_PID" ] || kill "$NOVNC_PID" 2>/dev/null || true
+  [ -z "$QEMU_PID" ] || kill "$QEMU_PID" 2>/dev/null || true
+  rm -f "$ISO_TMP"
+}
+trap cleanup EXIT INT TERM
+
 if [ -e /dev/kvm ]; then
-  echo "✅ KVM acceleration available (Tốc độ tối đa)"
-  KVM_ARG="-enable-kvm"
-  CPU_ARG="host"
-  MEMORY="4G"
-  SMP_CORES=4
+  echo "KVM acceleration available"
+  KVM_ARGS=(-enable-kvm -cpu host -m 4G -smp 4)
 else
-  echo "⚠️ KVM not available - using slower emulation mode"
-  KVM_ARG=""
-  CPU_ARG="qemu64"
-  MEMORY="2G"
-  SMP_CORES=1
+  echo "KVM unavailable; using slower TCG emulation"
+  KVM_ARGS=(-cpu qemu64 -m 2G -smp 1)
 fi
 
-# Download ISO if needed
-if [ ! -f "/iso/win10.iso" ]; then
-  echo "📥 Downloading Windows 10 ISO..."
-  wget -q --show-progress "$ISO_URL" -O "/iso/win10.iso"
+if [ ! -s "$ISO_PATH" ]; then
+  rm -f "$ISO_PATH" "$ISO_TMP"
+  echo "Downloading Windows 10 ISO"
+  wget --progress=dot:giga --tries=3 --timeout=30 "$ISO_URL" -O "$ISO_TMP"
+  test -s "$ISO_TMP"
+  mv "$ISO_TMP" "$ISO_PATH"
 fi
 
-# Create disk image if not exists
-if [ ! -f "/data/win10.qcow2" ]; then
-  echo "💽 Creating 100GB virtual disk..."
-  qemu-img create -f qcow2 "/data/win10.qcow2" 100G
+if [ ! -f "$DISK_PATH" ]; then
+  echo "Creating 100GB virtual disk"
+  qemu-img create -f qcow2 "$DISK_PATH" 100G
 fi
 
-# Windows-specific boot parameters
-BOOT_ORDER="-boot order=c,menu=on"
-if [ ! -s "/data/win10.qcow2" ] || [ $(stat -c%s "/data/win10.qcow2") -lt 1048576 ]; then
-  echo "🚀 First boot - installing Windows from ISO"
-  BOOT_ORDER="-boot order=d,menu=on"
-fi
-
-echo "⚙️ Starting Windows 10 VM with ${SMP_CORES} CPU cores and ${MEMORY} RAM"
-
-# Start QEMU with Windows-optimized settings (NO VirtIO to avoid missing drivers)
 qemu-system-x86_64 \
-  $KVM_ARG \
+  "${KVM_ARGS[@]}" \
   -machine q35,accel=kvm:tcg \
-  -cpu $CPU_ARG \
-  -m $MEMORY \
-  -smp $SMP_CORES \
   -vga std \
   -usb -device usb-tablet \
-  $BOOT_ORDER \
-  -drive file=/data/win10.qcow2,format=qcow2 \
-  -drive file=/iso/win10.iso,media=cdrom \
+  -boot order=d,menu=on \
+  -drive file="$DISK_PATH",format=qcow2 \
+  -drive file="$ISO_PATH",media=cdrom,readonly=on \
   -netdev user,id=net0,hostfwd=tcp::3389-:3389 \
   -device e1000,netdev=net0 \
   -display vnc=:0 \
-  -name "Windows10_VM" &
+  -name Windows10_VM &
+QEMU_PID=$!
 
-# Start noVNC
-sleep 5
-websockify --web /novnc 6080 localhost:5900 &
+websockify --web /usr/share/novnc 6080 localhost:5900 &
+NOVNC_PID=$!
 
-echo "===================================================="
-echo "🌐 Connect via VNC: http://localhost:6080"
-echo "🔌 After install, use RDP: localhost:3389"
-echo "❗ First boot may take 20-30 minutes for Windows install"
-echo "===================================================="
-
-tail -f /dev/null
+echo "noVNC: port 6080; RDP after Windows setup: port 3389"
+wait -n "$QEMU_PID" "$NOVNC_PID"
+echo "QEMU or noVNC exited unexpectedly" >&2
+exit 1
