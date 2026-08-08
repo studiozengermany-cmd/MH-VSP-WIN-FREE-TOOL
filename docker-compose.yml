@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  vps-win:
+    build: .
+    container_name: vps-win-free-tool
+    devices:
+      - /dev/kvm:/dev/kvm
+    ports:
+      - "6080:6080" # Web VNC
+      - "3389:3389" # Remote Desktop
+    volumes:
+      - windows_data:/data
+      - windows_iso:/iso
+    restart: unless-stopped
+
+volumes:
+  windows_data:
+  windows_iso:
