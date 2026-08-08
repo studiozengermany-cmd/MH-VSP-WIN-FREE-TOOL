@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "====================================="
-echo "   Khởi Động VPS WIN FREE TOOL       "
-echo "====================================="
-
 # Check for KVM support
 if [ -e /dev/kvm ]; then
   echo "✅ KVM acceleration available (Tốc độ tối đa)"
@@ -13,34 +9,59 @@ if [ -e /dev/kvm ]; then
   MEMORY="4G"
   SMP_CORES=4
 else
-  echo "⚠️ KVM not available - using slower emulation (Giả lập chậm)"
+  echo "⚠️ KVM not available - using slower emulation mode"
   KVM_ARG=""
   CPU_ARG="qemu64"
   MEMORY="2G"
-  SMP_CORES=2
+  SMP_CORES=1
 fi
 
-# Tải ISO nếu chưa có
-if [ ! -f /iso/win10.iso ]; then
-  echo "📥 Downloading Windows 10 ISO (Đang tải ISO Windows...)"
-  wget $ISO_URL -O /iso/win10.iso
+# Download ISO if needed
+if [ ! -f "/iso/win10.iso" ]; then
+  echo "📥 Downloading Windows 10 ISO..."
+  wget -q --show-progress "$ISO_URL" -O "/iso/win10.iso"
 fi
 
-# Tạo ổ cứng nếu chưa có
-if [ ! -f /data/win10.qcow2 ]; then
-  echo "💾 Creating virtual disk 100G (Tạo ổ cứng ảo)..."
-  qemu-img create -f qcow2 /data/win10.qcow2 100G
+# Create disk image if not exists
+if [ ! -f "/data/win10.qcow2" ]; then
+  echo "💽 Creating 100GB virtual disk..."
+  qemu-img create -f qcow2 "/data/win10.qcow2" 100G
 fi
 
-echo "🚀 Starting Windows 10 VM..."
-echo "💻 VNC Web Interface: http://localhost:6080/vnc.html"
+# Windows-specific boot parameters
+BOOT_ORDER="-boot order=c,menu=on"
+if [ ! -s "/data/win10.qcow2" ] || [ $(stat -c%s "/data/win10.qcow2") -lt 1048576 ]; then
+  echo "🚀 First boot - installing Windows from ISO"
+  BOOT_ORDER="-boot order=d,menu=on"
+fi
 
-# Mở noVNC
-websockify --web=/novnc --wrap-mode=ignore 6080 localhost:5900 &
+echo "⚙️ Starting Windows 10 VM with ${SMP_CORES} CPU cores and ${MEMORY} RAM"
 
-# Chạy QEMU
-exec qemu-system-x86_64 $KVM_ARG -cpu $CPU_ARG -smp $SMP_CORES -m $MEMORY \
-  -drive file=/data/win10.qcow2,if=virtio \
-  -cdrom /iso/win10.iso \
-  -net nic,model=virtio -net user,hostfwd=tcp::3389-:3389 \
-  -vnc :0
+# Start QEMU with Windows-optimized settings (NO VirtIO to avoid missing drivers)
+qemu-system-x86_64 \
+  $KVM_ARG \
+  -machine q35,accel=kvm:tcg \
+  -cpu $CPU_ARG \
+  -m $MEMORY \
+  -smp $SMP_CORES \
+  -vga std \
+  -usb -device usb-tablet \
+  $BOOT_ORDER \
+  -drive file=/data/win10.qcow2,format=qcow2 \
+  -drive file=/iso/win10.iso,media=cdrom \
+  -netdev user,id=net0,hostfwd=tcp::3389-:3389 \
+  -device e1000,netdev=net0 \
+  -display vnc=:0 \
+  -name "Windows10_VM" &
+
+# Start noVNC
+sleep 5
+websockify --web /novnc 6080 localhost:5900 &
+
+echo "===================================================="
+echo "🌐 Connect via VNC: http://localhost:6080"
+echo "🔌 After install, use RDP: localhost:3389"
+echo "❗ First boot may take 20-30 minutes for Windows install"
+echo "===================================================="
+
+tail -f /dev/null
