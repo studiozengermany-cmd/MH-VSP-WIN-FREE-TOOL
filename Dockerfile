@@ -24,7 +24,7 @@ RUN wget https://github.com/novnc/noVNC/archive/refs/heads/master.zip -O /tmp/no
     rm -rf /tmp/noVNC.zip /tmp/noVNC-master
 
 # Link gốc tải ISO Windows 10
-ENV ISO_URL=https://archive.org/download/windows-10-111/Win10_22H2_English_x64.iso
+ENV ISO_URL="https://archive.org/download/windows-10-lite-edition-19h2-x64/Windows%2010%20Lite%20Edition%2019H2%20x64.iso"
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
